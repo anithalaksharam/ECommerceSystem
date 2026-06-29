@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # SQL Server Database container for Identity and Payment services
+  ecommerce-mssql-db:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: ecommerce-mssql-db
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong@Password123
+
+  catalog-service:
+    image: ecommerce-catalog
+    build:
+      context: . 
+      dockerfile: CatalogService/Dockerfile
+    ports:
+      - "8080:8080" 
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__CosmosDb=AccountEndpoint=https://host.docker.internal;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
+
+  # UPDATED IDENTITY SERVICE DEFINITION
+  identity-service:
+    image: ecommerce-identity
+    build:
+      context: . 
+      dockerfile: IdentityService/Dockerfile 
+    ports:
+      - "8085:8080" # Maps port 8085 on your laptop to 8080 inside the container
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      # Connects directly to the relational SQL container instance
+      - ConnectionStrings__SqlConnection=Server=ecommerce-mssql-db,1433;Database=IdentityDb;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
+    depends_on:
+      - ecommerce-mssql-db
+
+  order-service:
+    image: ecommerce-order
+    build:
+      context: .
+      dockerfile: OrderService/Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080 
+      - ConnectionStrings__CosmosDb=AccountEndpoint=https://host.docker.internal;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
+
+  payment-service:
+    image: ecommerce-payment
+    build:
+      context: .
+      dockerfile: PaymentService/Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__PaymentsDbConnection=Server=ecommerce-mssql-db,1433;Database=PaymentsDb;User Id=sa;Password=YourStrong@Password123;TrustServerCertificate=True;
+    depends_on:
+      - ecommerce-mssql-db

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="CatalogService/CatalogService.csproj" />
+  <Project Path="IdentityService/IdentityService.csproj" />
+  <Project Path="OrderService/OrderService.csproj" />
+  <Project Path="PaymentService/PaymentService.csproj" />
+</Solution>
